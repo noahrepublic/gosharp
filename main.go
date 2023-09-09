@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
+
+	"github.com/noahrepublic/gosharp/lexer"
 )
 
 func main() {
@@ -18,15 +21,13 @@ func main() {
 		panic(err)
 	}
 
-	print(string(data))
-
 	if data == nil {
 		panic("Empty or invalid file")
 	}
 
-	tokens := lexer.tokenize(string(data))
+	tokens := lexer.Tokenize(string(data))
 
 	for _, token := range tokens {
-		print(token.value)
+		fmt.Println("Token", token.Value)
 	}
 }

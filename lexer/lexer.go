@@ -1,6 +1,10 @@
 package lexer
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"unicode"
+)
 
 type TokenType int
 
@@ -9,6 +13,8 @@ const (
 	Identifier TokenType = iota
 	Equals     TokenType = iota
 
+	Operation TokenType = iota
+
 	OpenParenthesis  TokenType = iota
 	CloseParenthesis TokenType = iota
 
@@ -16,30 +22,136 @@ const (
 )
 
 type Token struct {
-	value string
-	token TokenType
+	Value string
+	Token TokenType
 }
 
 var tokenMap = map[string]TokenType{
-	"let": Let,
-	"=":   Equals,
+	"=": Equals,
 
 	"(": OpenParenthesis,
 	")": CloseParenthesis,
+
+	"+": Operation,
+	"-": Operation,
+	"*": Operation,
+	"/": Operation,
 }
 
-func tokenize(source string) (tokens []Token) {
+var identifierMap = map[string]TokenType{
+	"let": Let,
+}
+
+func isNumber(character string) bool {
+	_, err := strconv.Atoi(character)
+
+	return err == nil
+}
+
+func isLetter(character string) bool {
+	for _, rune := range character { // always ONE iteration.. surely a better way
+		if !unicode.IsLetter(rune) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func Tokenize(source string) (tokens []Token) {
 	tokens = make([]Token, 0)
 
-	for i := 0; i < len(source); i++ {
-		if source[i] == ' ' {
+	skip := 0 // if you have to skip a character, this is how many you skip
+
+	lineCount := 0
+	rowCount := 0
+
+	for i, character := range source {
+		rowCount++
+		if skip > 0 {
+			skip--
 			continue
 		}
 
-		token := tokenMap[string(source[i])]
+		data := string(character)
 
-		fmt.Println(token)
+		if data == " " {
+			continue
+		}
 
+		if data == "\n" {
+			rowCount = 0
+			lineCount++
+			continue
+		}
+
+		token := tokenMap[string(character)]
+
+		if token != 0 {
+			tokens = append(tokens, Token{Value: data, Token: token})
+			continue
+		}
+
+		// tokenize multichar tokens
+
+		numberIdentifier := isNumber(data)
+
+		if numberIdentifier {
+			// loop through to get the ENTIRE number
+
+			var number string
+
+			var length int
+
+			for _, src := range source[i:] {
+				character := string(src)
+
+				if isNumber(character) {
+					number += character
+					length++
+					continue
+				}
+
+				break
+			}
+
+			tokens = append(tokens, Token{Value: number, Token: Number})
+
+			skip = length - 1
+			continue
+		}
+
+		letterIdentifier := isLetter(data)
+
+		if !letterIdentifier {
+			panic(fmt.Sprintf("Invalid identifier at line: %d:%d", lineCount, rowCount))
+		}
+
+		var identifier string
+
+		var length int
+
+		for _, src := range source[i:] {
+			character := string(src)
+
+			if isLetter(character) {
+				identifier += character
+				length++
+				continue
+			}
+
+			break
+		}
+
+		identifierToken := identifierMap[identifier]
+
+		if identifierToken == 0 {
+			panic(fmt.Sprintf("Invalid identifier at line: %d:[%d:%d]", lineCount, rowCount, i+length+1)) // future: should we instead push identifier tokentype?
+		}
+
+		tokens = append(tokens, Token{Value: identifier, Token: identifierToken})
+
+		skip = length
 	}
 
 	return
