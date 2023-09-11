@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	interpreter "github.com/noahrepublic/gosharp/intepreter"
 	"os"
 
-	"github.com/noahrepublic/gosharp/lexer"
+	"github.com/noahrepublic/gosharp/parser"
 )
 
 func main() {
@@ -25,9 +26,10 @@ func main() {
 		panic("Empty or invalid file")
 	}
 
-	tokens := lexer.Tokenize(string(data))
+	parser := parser.Parser{}
+	program := parser.Create(string(data))
 
-	for _, token := range tokens {
-		fmt.Println("Token", token.Value)
-	}
+	result := interpreter.EvalProgram(*program)
+
+	fmt.Print(result, "\n")
 }

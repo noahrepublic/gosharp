@@ -19,11 +19,14 @@ const (
 	CloseParenthesis TokenType = iota
 
 	Let TokenType = iota
+
+	Exit TokenType = iota // a token to signify the end for parsers
+	Null TokenType = iota
 )
 
 type Token struct {
 	Value string
-	Token TokenType
+	Type  TokenType
 }
 
 var tokenMap = map[string]TokenType{
@@ -36,10 +39,13 @@ var tokenMap = map[string]TokenType{
 	"-": Operation,
 	"*": Operation,
 	"/": Operation,
+	"%": Operation,
 }
 
 var identifierMap = map[string]TokenType{
 	"let": Let,
+
+	"null": Null,
 }
 
 func isNumber(character string) bool {
@@ -88,7 +94,7 @@ func Tokenize(source string) (tokens []Token) {
 		token := tokenMap[string(character)]
 
 		if token != 0 {
-			tokens = append(tokens, Token{Value: data, Token: token})
+			tokens = append(tokens, Token{Value: data, Type: token})
 			continue
 		}
 
@@ -101,12 +107,13 @@ func Tokenize(source string) (tokens []Token) {
 
 			var number string
 
-			var length int
+			var length int = 0
 
 			for _, src := range source[i:] {
 				character := string(src)
 
 				if isNumber(character) {
+
 					number += character
 					length++
 					continue
@@ -115,7 +122,7 @@ func Tokenize(source string) (tokens []Token) {
 				break
 			}
 
-			tokens = append(tokens, Token{Value: number, Token: Number})
+			tokens = append(tokens, Token{Value: number, Type: Number})
 
 			skip = length - 1
 			continue
@@ -146,13 +153,14 @@ func Tokenize(source string) (tokens []Token) {
 		identifierToken := identifierMap[identifier]
 
 		if identifierToken == 0 {
-			panic(fmt.Sprintf("Invalid identifier at line: %d:[%d:%d]", lineCount, rowCount, i+length+1)) // future: should we instead push identifier tokentype?
+			tokens = append(tokens, Token{Value: identifier, Type: Identifier}) // we push, it could be a variable, originally was panicing
 		}
 
-		tokens = append(tokens, Token{Value: identifier, Token: identifierToken})
+		tokens = append(tokens, Token{Value: identifier, Type: identifierToken})
 
 		skip = length
 	}
 
+	tokens = append(tokens, Token{Value: "End", Type: Exit})
 	return
 }
